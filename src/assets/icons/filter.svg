@@ -1,0 +1,51 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="filterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#DC2626;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EF4444;stop-opacity:1" />
+    </linearGradient>
+    <filter id="filterGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle with gradient -->
+  <circle cx="128" cy="128" r="100" fill="url(#filterGradient)" opacity="0.1" filter="url(#filterGlow)"/>
+  
+  <!-- Main filter icon -->
+  <g transform="translate(128, 128)">
+    <!-- Filter funnel -->
+    <g>
+      <!-- Top wide part -->
+      <rect x="-35" y="-30" width="70" height="8" rx="4" fill="url(#filterGradient)" opacity="0.8" filter="url(#filterGlow)"/>
+      
+      <!-- Middle funnel shape -->
+      <path d="M-35 -22 L-20 -5 L-20 15 C-20 20 -15 25 -10 25 L10 25 C15 25 20 20 20 15 L20 -5 L35 -22 Z" 
+            fill="url(#filterGradient)" opacity="0.7" filter="url(#filterGlow)"/>
+      
+      <!-- Filter lines inside -->
+      <g opacity="0.9">
+        <line x1="-25" y1="-15" x2="25" y2="-15" stroke="#F3F4F6" stroke-width="2" stroke-linecap="round"/>
+        <line x1="-15" y1="-8" x2="15" y2="-8" stroke="#F3F4F6" stroke-width="2" stroke-linecap="round"/>
+        <line x1="-8" y1="-1" x2="8" y2="-1" stroke="#F3F4F6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Bottom output -->
+      <rect x="-5" y="25" width="10" height="15" rx="5" fill="url(#filterGradient)" opacity="0.6"/>
+    </g>
+    
+    <!-- Decorative particles -->
+    <g opacity="0.5">
+      <circle cx="-40" cy="-10" r="2" fill="#E5E7EB"/>
+      <circle cx="45" cy="5" r="1.5" fill="#E5E7EB"/>
+      <circle cx="-30" cy="30" r="1" fill="#E5E7EB"/>
+    </g>
+    
+    <!-- Subtle highlight -->
+    <ellipse cx="-10" cy="-20" rx="12" ry="6" fill="#FFFFFF" opacity="0.2"/>
+  </g>
+</svg>

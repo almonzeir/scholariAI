@@ -1,0 +1,54 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="copyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A855F7;stop-opacity:1" />
+    </linearGradient>
+    <filter id="copyGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle with gradient -->
+  <circle cx="128" cy="128" r="100" fill="url(#copyGradient)" opacity="0.1" filter="url(#copyGlow)"/>
+  
+  <!-- Main copy icon -->
+  <g transform="translate(128, 128)">
+    <!-- Back document -->
+    <rect x="-15" y="-25" width="30" height="40" rx="4" fill="url(#copyGradient)" opacity="0.6" filter="url(#copyGlow)"/>
+    
+    <!-- Front document -->
+    <rect x="-5" y="-15" width="30" height="40" rx="4" fill="url(#copyGradient)" opacity="0.8" filter="url(#copyGlow)"/>
+    
+    <!-- Document content lines -->
+    <g opacity="0.9">
+      <line x1="2" y1="-8" x2="18" y2="-8" stroke="#F3F4F6" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="2" y1="-3" x2="22" y2="-3" stroke="#F3F4F6" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="2" y1="2" x2="15" y2="2" stroke="#F3F4F6" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="2" y1="7" x2="20" y2="7" stroke="#F3F4F6" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="2" y1="12" x2="12" y2="12" stroke="#F3F4F6" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Copy indicator arrows -->
+    <g opacity="0.7">
+      <!-- Small arrow showing duplication -->
+      <path d="M-25 -5 L-30 -10 L-30 -7 L-35 -7 L-35 -3 L-30 -3 L-30 0 Z" 
+            fill="#E5E7EB" opacity="0.8"/>
+      
+      <!-- Motion lines -->
+      <line x1="-32" y1="-12" x2="-28" y2="-12" stroke="#E5E7EB" stroke-width="1" opacity="0.6"/>
+      <line x1="-32" y1="2" x2="-28" y2="2" stroke="#E5E7EB" stroke-width="1" opacity="0.6"/>
+    </g>
+    
+    <!-- Document corner fold -->
+    <path d="M20 -15 L20 -10 L25 -10 Z" fill="url(#copyGradient)" opacity="0.9"/>
+    <path d="M20 -15 L20 -10 L25 -10 Z" fill="#FFFFFF" opacity="0.2"/>
+    
+    <!-- Subtle highlight -->
+    <ellipse cx="5" cy="-10" rx="8" ry="4" fill="#FFFFFF" opacity="0.2"/>
+  </g>
+</svg>

@@ -1,0 +1,45 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="questionsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D9488;stop-opacity:1" />
+    </linearGradient>
+    <filter id="questionsGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle with gradient -->
+  <circle cx="128" cy="128" r="100" fill="url(#questionsGradient)" opacity="0.1" filter="url(#questionsGlow)"/>
+  
+  <!-- Main questions icon -->
+  <g transform="translate(128, 128)">
+    <!-- Question mark circle background -->
+    <circle cx="0" cy="0" r="45" fill="url(#questionsGradient)" opacity="0.8" filter="url(#questionsGlow)"/>
+    
+    <!-- Question mark -->
+    <g transform="translate(0, -5)">
+      <!-- Question mark curve -->
+      <path d="M-15 -20 C-15 -30 -5 -35 5 -35 C15 -35 25 -30 25 -20 C25 -10 15 -5 5 0 L5 10" 
+            stroke="#F3F4F6" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.9"/>
+      
+      <!-- Question mark dot -->
+      <circle cx="5" cy="20" r="4" fill="#F3F4F6" opacity="0.9"/>
+    </g>
+    
+    <!-- Decorative elements -->
+    <g opacity="0.6">
+      <!-- Small question marks around -->
+      <text x="-35" y="-25" font-family="Arial, sans-serif" font-size="12" fill="#E5E7EB" opacity="0.7">?</text>
+      <text x="30" y="-15" font-family="Arial, sans-serif" font-size="10" fill="#E5E7EB" opacity="0.5">?</text>
+      <text x="-30" y="35" font-family="Arial, sans-serif" font-size="8" fill="#E5E7EB" opacity="0.4">?</text>
+    </g>
+    
+    <!-- Subtle highlight -->
+    <ellipse cx="-15" cy="-15" rx="10" ry="6" fill="#FFFFFF" opacity="0.2"/>
+  </g>
+</svg>

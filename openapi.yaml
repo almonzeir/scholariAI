@@ -1,0 +1,2075 @@
+# OpenAPI 3.0 specification for ScholarAI Phase 5
+openapi: 3.0.3
+info:
+  title: ScholarAI API
+  description: AI-powered scholarship matching platform
+  version: 5.0.0
+  contact:
+    name: ScholarAI Team
+    email: support@scholarai.com
+
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://api.scholarai.com
+    description: Production server
+
+paths:
+  /parse-cv:
+    post:
+      summary: Extract Profile from a PDF CV
+      description: Upload a PDF CV and extract structured profile information using AI
+      tags:
+        - CV Processing
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                cvFile:
+                  type: string
+                  format: binary
+                  description: PDF file containing the CV (max 8MB)
+              required:
+                - cvFile
+      responses:
+        '200':
+          description: Successfully extracted profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: Bad request - missing file or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /match:
+    post:
+      summary: Return ranked scholarships for a Profile
+      description: Match a user profile against available scholarships and return ranked results
+      tags:
+        - Scholarship Matching
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile:
+                  $ref: '#/components/schemas/Profile'
+                filters:
+                  type: object
+                  properties:
+                    country:
+                      type: string
+                      description: Filter by scholarship country
+                    degree:
+                      type: string
+                      enum: ["Bachelor", "Master", "PhD", "Any"]
+                      description: Filter by degree level
+                    deadlineDaysMax:
+                      type: integer
+                      minimum: 0
+                      description: Maximum days until deadline
+              required:
+                - profile
+      responses:
+        '200':
+          description: Successfully matched scholarships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scholarship'
+        '400':
+          description: Bad request - invalid profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /canonicalize/degree-field:
+    post:
+      summary: Canonicalize degree and field
+      description: Normalize free text degree and field inputs to controlled vocabulary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                degreeTarget:
+                  type: string
+                  description: Free text degree input
+                  example: "bachelor of science"
+                field:
+                  type: string
+                  description: Free text field input
+                  example: "computer science"
+              required:
+                - degreeTarget
+                - field
+      responses:
+        '200':
+          description: Canonicalization successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  input:
+                    type: object
+                    properties:
+                      degreeTarget:
+                        type: string
+                      field:
+                        type: string
+                  output:
+                    $ref: '#/components/schemas/CanonicalizedDegreeField'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Canonicalization failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /canonicalize/batch:
+    post:
+      summary: Batch canonicalize degree and field pairs
+      description: Normalize multiple free text degree and field inputs to controlled vocabulary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      degreeTarget:
+                        type: string
+                      field:
+                        type: string
+                    required:
+                      - degreeTarget
+                      - field
+                  maxItems: 50
+              required:
+                - inputs
+      responses:
+        '200':
+          description: Batch canonicalization successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inputs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        degreeTarget:
+                          type: string
+                        field:
+                          type: string
+                  outputs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CanonicalizedDegreeField'
+                  count:
+                    type: integer
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid input or batch too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Batch canonicalization failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /canonicalize/test:
+    get:
+      summary: Test canonicalization API
+      description: Run predefined test cases to verify canonicalization functionality
+      responses:
+        '200':
+          description: Test completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        input:
+                          type: object
+                          properties:
+                            degreeTarget:
+                              type: string
+                            field:
+                              type: string
+                        output:
+                          $ref: '#/components/schemas/CanonicalizedDegreeField'
+                        status:
+                          type: string
+                          enum: ["success", "error"]
+                        error:
+                          type: string
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      successful:
+                        type: integer
+                      failed:
+                        type: integer
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: Test failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pii-scrub/scrub:
+    post:
+      summary: Scrub PII from a profile object
+      tags:
+        - PII Scrubbing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile:
+                  type: object
+                  description: Profile object to scrub PII from
+              required:
+                - profile
+      responses:
+        '200':
+          description: PII scrubbing results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PIIScrubResult'
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error
+
+  /pii-scrub/detect:
+    post:
+      summary: Detect PII in a profile object without scrubbing
+      tags:
+        - PII Scrubbing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile:
+                  type: object
+                  description: Profile object to analyze for PII
+              required:
+                - profile
+      responses:
+        '200':
+          description: PII detection results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PIIDetectionResult'
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error
+
+  /pii-scrub/batch:
+    post:
+      summary: Scrub PII from multiple profiles
+      tags:
+        - PII Scrubbing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profiles:
+                  type: array
+                  items:
+                    type: object
+                  maxItems: 50
+                  description: Array of profile objects to scrub (max 50)
+              required:
+                - profiles
+      responses:
+        '200':
+          description: Batch PII scrubbing results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchPIIScrubResult'
+        '400':
+          description: Invalid input or batch size too large
+        '500':
+          description: Internal server error
+
+  /pii-scrub/test:
+    get:
+      summary: Test PII scrubbing functionality
+      tags:
+        - PII Scrubbing
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  original:
+                    type: object
+                  scrubbed:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+                  error:
+                    type: string
+        '500':
+          description: Internal server error
+
+  /scholarship/scrape:
+    post:
+      summary: Scrape and normalize a single scholarship from URL
+      tags:
+        - Scholarship Scraping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: URL of the scholarship page to scrape
+              required:
+                - url
+      responses:
+        '200':
+          description: Scholarship scraped and normalized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Scholarship'
+                  metadata:
+                    $ref: '#/components/schemas/ScrapingMetadata'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Failed to scrape or normalize
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scholarship/batch-scrape:
+    post:
+      summary: Scrape and normalize multiple scholarships from URLs
+      tags:
+        - Scholarship Scraping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                urls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  description: Array of scholarship page URLs to scrape
+                  maxItems: 50
+                concurrency:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 3
+                  description: Number of concurrent scraping requests
+              required:
+                - urls
+      responses:
+        '200':
+          description: Batch scraping completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  scholarships:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Scholarship'
+                  summary:
+                    $ref: '#/components/schemas/BatchSummary'
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScrapingError'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scholarship/validate:
+    post:
+      summary: Validate a scholarship object against the schema
+      tags:
+        - Scholarship Scraping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scholarship:
+                  $ref: '#/components/schemas/Scholarship'
+              required:
+                - scholarship
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  valid:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  scholarship:
+                    $ref: '#/components/schemas/Scholarship'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scholarship/test:
+    get:
+      summary: Test the scholarship scraping functionality
+      tags:
+        - Scholarship Scraping
+      responses:
+        '200':
+          description: Test completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  testResults:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scholarship/schema:
+    get:
+      summary: Get scholarship schema
+      tags:
+        - Scholarship
+      responses:
+        '200':
+          description: Schema retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schema:
+                    $ref: '#/components/schemas/Scholarship'
+                  constraints:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /funding/classify:
+    post:
+      summary: Classify if a scholarship is fully funded
+      tags:
+        - Funding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scholarship
+              properties:
+                scholarship:
+                  $ref: '#/components/schemas/Scholarship'
+      responses:
+        '200':
+          description: Classification completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/FundingClassification'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error
+
+  /funding/batch-classify:
+    post:
+      summary: Classify funding for multiple scholarships
+      tags:
+        - Funding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scholarships
+              properties:
+                scholarships:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Scholarship'
+                  maxItems: 100
+                concurrency:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 3
+      responses:
+        '200':
+          description: Batch classification completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/BatchFundingClassification'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error
+
+  /funding/test:
+    get:
+      summary: Test the funding classification system
+      tags:
+        - Funding
+      responses:
+        '200':
+          description: Test completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  testResults:
+                    $ref: '#/components/schemas/BatchFundingClassification'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: Internal server error
+
+  /funding/validate-classification:
+    post:
+      summary: Validate a funding classification result
+      tags:
+        - Funding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - classification
+              properties:
+                classification:
+                  $ref: '#/components/schemas/ClassificationResult'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  classification:
+                    $ref: '#/components/schemas/ClassificationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error
+
+  /funding/schema:
+    get:
+      summary: Get funding classification schema
+      tags:
+        - Funding
+      responses:
+        '200':
+          description: Schema retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schema:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/parse:
+    post:
+      tags:
+        - Deadline Parsing
+      summary: Parse a single deadline text
+      description: Parse deadline text into ISO YYYY-MM-DD format or "varies" using hybrid approach (AI with rule-based fallback)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Deadline text to parse
+                  example: "Application deadline: December 31, 2024"
+      responses:
+        '200':
+          description: Deadline parsed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadlineParseResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/parse-ai:
+    post:
+      tags:
+        - Deadline Parsing
+      summary: Parse deadline using AI only
+      description: Parse deadline text using only Gemini AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Deadline text to parse
+      responses:
+        '200':
+          description: Deadline parsed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadlineParseResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/parse-rules:
+    post:
+      tags:
+        - Deadline Parsing
+      summary: Parse deadline using rule-based approach
+      description: Parse deadline text using only rule-based pattern matching
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Deadline text to parse
+      responses:
+        '200':
+          description: Deadline parsed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadlineParseResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/batch-parse:
+    post:
+      tags:
+        - Deadline Parsing
+      summary: Parse multiple deadline texts
+      description: Parse multiple deadline texts in batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - texts
+              properties:
+                texts:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 100
+                  description: Array of deadline texts to parse
+                  example: ["Deadline: Dec 31, 2024", "Rolling admissions"]
+      responses:
+        '200':
+          description: Batch parsing completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchDeadlineParseResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/test:
+    get:
+      tags:
+        - Deadline Parsing
+      summary: Test deadline parsing system
+      description: Run comprehensive tests with sample deadline texts
+      responses:
+        '200':
+          description: Tests completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testResults:
+                    $ref: '#/components/schemas/DeadlineTestResults'
+                  metadata:
+                    type: object
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/validate:
+    post:
+      tags:
+        - Deadline Parsing
+      summary: Validate a parsed deadline
+      description: Validate the format and correctness of a parsed deadline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deadline
+              properties:
+                deadline:
+                  type: string
+                  description: Deadline to validate
+                  example: "2024-12-31"
+                originalText:
+                  type: string
+                  description: Original deadline text for context
+                  example: "Application deadline: December 31, 2024"
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadlineValidationResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deadline/schema:
+    get:
+      tags:
+        - Deadline Parsing
+      summary: Get deadline parsing schema
+      description: Retrieve the schema and rules for deadline parsing
+      responses:
+        '200':
+          description: Schema retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  schema:
+                    type: object
+                  metadata:
+                    type: object
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Deduplication Endpoints
+  /deduplication/deduplicate:
+    post:
+      tags:
+        - Deduplication
+      summary: Deduplicate scholarship items
+      description: Remove duplicate scholarship items using hybrid AI and rule-based approach
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScholarshipItem'
+                  description: Array of scholarship items to deduplicate
+                method:
+                  type: string
+                  enum: [ai, rules, hybrid]
+                  default: hybrid
+                  description: Deduplication method to use
+              required:
+                - items
+      responses:
+        '200':
+          description: Deduplication completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeduplicationResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deduplication/deduplicate-ai:
+    post:
+      tags:
+        - Deduplication
+      summary: Deduplicate using AI only
+      description: Remove duplicate scholarship items using AI-powered analysis only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScholarshipItem'
+                  description: Array of scholarship items to deduplicate
+              required:
+                - items
+      responses:
+        '200':
+          description: AI deduplication completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeduplicationResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deduplication/deduplicate-rules:
+    post:
+      tags:
+        - Deduplication
+      summary: Deduplicate using rules only
+      description: Remove duplicate scholarship items using rule-based similarity matching only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScholarshipItem'
+                  description: Array of scholarship items to deduplicate
+              required:
+                - items
+      responses:
+        '200':
+          description: Rule-based deduplication completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeduplicationResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deduplication/batch-deduplicate:
+    post:
+      tags:
+        - Deduplication
+      summary: Batch deduplicate multiple arrays
+      description: Deduplicate multiple arrays of scholarship items in a single request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                batches:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScholarshipItem'
+                  description: Array of arrays of scholarship items to deduplicate
+                method:
+                  type: string
+                  enum: [ai, rules, hybrid]
+                  default: hybrid
+                  description: Deduplication method to use
+              required:
+                - batches
+      responses:
+        '200':
+          description: Batch deduplication completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchDeduplicationResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deduplication/validate:
+    post:
+      tags:
+        - Deduplication
+      summary: Validate deduplication results
+      description: Validate the results of a deduplication operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                original:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScholarshipItem'
+                  description: Original array of scholarship items
+                deduplicated:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScholarshipItem'
+                  description: Deduplicated array of scholarship items
+              required:
+                - original
+                - deduplicated
+      responses:
+        '200':
+          description: Validation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deduplication/test:
+    get:
+      tags:
+        - Deduplication
+      summary: Test deduplication system
+      description: Test the deduplication system with sample data
+      parameters:
+        - in: query
+          name: method
+          schema:
+            type: string
+            enum: [ai, rules, hybrid]
+            default: hybrid
+          description: Deduplication method to test
+      responses:
+        '200':
+          description: Test completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  testData:
+                    type: object
+                    properties:
+                      input:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ScholarshipItem'
+                      output:
+                        $ref: '#/components/schemas/DeduplicationResult'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deduplication/schema:
+    get:
+      tags:
+        - Deduplication
+      summary: Get deduplication schema
+      description: Retrieve the API schema for deduplication endpoints
+      responses:
+        '200':
+          description: Schema retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  schema:
+                    type: object
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check if the API is running and healthy
+      tags:
+        - System
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                  environment:
+                    type: string
+
+components:
+  schemas:
+    Profile:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Full name of the applicant
+        nationality:
+          type: string
+          nullable: true
+          description: Nationality or citizenship
+        degreeTarget:
+          type: string
+          enum: ["Bachelor", "Master", "PhD"]
+          nullable: true
+          description: Target degree level
+        field:
+          type: string
+          nullable: true
+          description: Field of study or specialization
+        gpa:
+          type: string
+          nullable: true
+          description: Grade point average in original format
+        certifications:
+          type: array
+          items:
+            type: string
+          default: []
+          description: List of certifications, test scores, licenses
+          example: ["PMP", "IELTS 7.0", "AWS Certified"]
+        specialStatus:
+          type: string
+          nullable: true
+          description: Special status that may affect eligibility
+          example: "refugee"
+        languages:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Languages spoken by the applicant
+          example: ["English", "Spanish", "French"]
+
+    Scholarship:
+      type: object
+      required:
+        - id
+        - name
+        - country
+        - degree
+        - eligibility
+        - deadline
+        - link
+        - source
+        - fitScore
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the scholarship
+        name:
+          type: string
+          description: Official name of the scholarship
+        country:
+          type: string
+          description: Country where the scholarship is offered
+        degree:
+          type: string
+          enum: ["Bachelor", "Master", "PhD", "Any"]
+          description: Target degree level
+        eligibility:
+          type: string
+          maxLength: 180
+          description: Brief eligibility requirements
+        deadline:
+          type: string
+          description: Application deadline in YYYY-MM-DD format or "varies"
+          pattern: '^(\d{4}-\d{2}-\d{2}|varies)$'
+        link:
+          type: string
+          format: uri
+          description: Direct link to official scholarship page
+        source:
+          type: string
+          description: Source domain or organization
+          example: "daad.de"
+        fitScore:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: AI-calculated fit score for the user profile
+
+    CanonicalizedDegreeField:
+      type: object
+      properties:
+        degreeTarget:
+          type: string
+          nullable: true
+          enum: ["Bachelor", "Master", "PhD", null]
+          description: Canonicalized degree target
+        field:
+          type: string
+          nullable: true
+          description: Canonicalized field name
+      required:
+        - degreeTarget
+        - field
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+          description: Additional error details (e.g., validation errors)
+
+    PIIScrubResult:
+      type: object
+      properties:
+        original:
+          type: object
+          description: Original profile object
+        scrubbed:
+          type: object
+          description: Profile object with PII scrubbed
+        piiDetected:
+          type: array
+          items:
+            type: string
+          description: List of PII types detected
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - original
+        - scrubbed
+        - piiDetected
+        - timestamp
+
+    PIIDetectionResult:
+      type: object
+      properties:
+        profile:
+          type: object
+          description: Original profile object
+        piiDetected:
+          type: array
+          items:
+            type: string
+          description: List of PII types detected
+        details:
+          type: object
+          description: Detailed PII detection information
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - profile
+        - piiDetected
+        - timestamp
+
+    BatchPIIScrubResult:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PIIScrubResult'
+        count:
+          type: integer
+          description: Number of profiles processed
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - results
+        - count
+        - timestamp
+
+    Scholarship:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the scholarship
+        name:
+          type: string
+          description: Name of the scholarship
+        country:
+          type: string
+          nullable: true
+          description: Country where the scholarship is available
+        degree:
+          type: string
+          enum: ["Bachelor", "Master", "PhD", "Any"]
+          description: Degree level for the scholarship
+        eligibility:
+          type: string
+          maxLength: 220
+          description: Eligibility requirements (max 220 characters)
+        deadline:
+          type: string
+          nullable: true
+          pattern: '^(\\d{4}-\\d{2}-\\d{2}|varies)$'
+          description: Application deadline in YYYY-MM-DD format or "varies"
+        link:
+          type: string
+          format: uri
+          description: Official application or information URL
+        source:
+          type: string
+          description: Source domain of the scholarship information
+        isFullyFunded:
+          type: boolean
+          description: Whether the scholarship is fully funded
+      required:
+        - id
+        - name
+        - degree
+        - eligibility
+        - link
+        - source
+        - isFullyFunded
+
+    ClassificationResult:
+      type: object
+      required:
+        - isFullyFunded
+        - reason
+      properties:
+        isFullyFunded:
+          type: boolean
+          description: Whether the scholarship is fully funded
+        reason:
+          type: string
+          maxLength: 160
+          description: Explanation for the funding classification (max 160 characters)
+
+    FundingClassification:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the classification was successful
+        classification:
+          $ref: '#/components/schemas/ClassificationResult'
+        metadata:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            model:
+              type: string
+              description: AI model used for classification
+            scholarshipId:
+              type: string
+              description: ID of the classified scholarship
+        error:
+          type: string
+          description: Error message if classification failed
+
+    BatchFundingClassification:
+      type: object
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              scholarshipId:
+                type: string
+              success:
+                type: boolean
+              classification:
+                $ref: '#/components/schemas/ClassificationResult'
+              error:
+                type: string
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            fullyFunded:
+              type: integer
+            partiallyFunded:
+              type: integer
+            processingTimeMs:
+              type: integer
+            averageTimePerScholarship:
+              type: integer
+        errors:
+          type: array
+          items:
+            type: object
+
+    ScrapingMetadata:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Original URL scraped
+        scrapedAt:
+          type: string
+          format: date-time
+          description: Timestamp when scraping occurred
+        processingTime:
+          type: number
+          description: Time taken to scrape and process in seconds
+        source:
+          type: string
+          description: Domain or source identifier
+      required:
+        - url
+        - scrapedAt
+        - processingTime
+        - source
+
+    BatchSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of URLs processed
+        successful:
+          type: integer
+          description: Number of successfully scraped scholarships
+        failed:
+          type: integer
+          description: Number of failed scraping attempts
+        processingTime:
+          type: number
+          description: Total processing time in seconds
+      required:
+        - total
+        - successful
+        - failed
+        - processingTime
+
+    ScrapingError:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL that failed to scrape
+        error:
+          type: string
+          description: Error message
+        errorType:
+          type: string
+          enum: ["network", "parsing", "validation", "timeout"]
+          description: Type of error encountered
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+      required:
+        - url
+        - error
+        - errorType
+        - timestamp
+
+    DeadlineParseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether parsing was successful
+        deadline:
+          type: string
+          nullable: true
+          pattern: '^(\d{4}-\d{2}-\d{2}|varies)$'
+          description: Parsed deadline in YYYY-MM-DD format or "varies"
+        originalText:
+          type: string
+          description: Original deadline text
+        method:
+          type: string
+          enum: ["ai", "rules", "hybrid"]
+          description: Method used for parsing
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence score of the parsing result
+        metadata:
+          type: object
+          properties:
+            processingTimeMs:
+              type: integer
+            timestamp:
+              type: string
+              format: date-time
+        error:
+          type: string
+          nullable: true
+          description: Error message if parsing failed
+      required:
+        - success
+        - originalText
+        - method
+        - confidence
+        - metadata
+
+    BatchDeadlineParseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeadlineParseResult'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            averageConfidence:
+              type: number
+            processingTimeMs:
+              type: integer
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - success
+        - results
+        - summary
+        - timestamp
+
+    DeadlineTestResults:
+      type: object
+      properties:
+        testCases:
+          type: array
+          items:
+            type: object
+            properties:
+              input:
+                type: string
+              expected:
+                type: string
+              actual:
+                type: string
+              passed:
+                type: boolean
+              method:
+                type: string
+              confidence:
+                type: number
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            passed:
+              type: integer
+            failed:
+              type: integer
+            accuracy:
+              type: number
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - testCases
+        - summary
+        - timestamp
+
+    DeadlineValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Whether the deadline is valid
+        deadline:
+          type: string
+          description: The deadline being validated
+        errors:
+          type: array
+          items:
+            type: string
+          description: List of validation errors
+        warnings:
+          type: array
+          items:
+            type: string
+          description: List of validation warnings
+        metadata:
+          type: object
+          properties:
+            format:
+              type: string
+            isPast:
+              type: boolean
+            daysFromNow:
+              type: integer
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - valid
+        - deadline
+        - errors
+        - warnings
+        - metadata
+        - timestamp
+
+    ScholarshipItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the scholarship item
+        name:
+          type: string
+          description: Name of the scholarship
+        country:
+          type: string
+          nullable: true
+          description: Country where the scholarship is available
+        degree:
+          type: string
+          enum: ["Bachelor", "Master", "PhD", "Any"]
+          description: Degree level for the scholarship
+        eligibility:
+          type: string
+          description: Eligibility requirements
+        deadline:
+          type: string
+          nullable: true
+          description: Application deadline
+        link:
+          type: string
+          format: uri
+          description: Official application or information URL
+        source:
+          type: string
+          description: Source domain of the scholarship information
+      required:
+        - id
+        - name
+        - degree
+        - eligibility
+        - link
+        - source
+
+    DeduplicationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether deduplication was successful
+        originalCount:
+          type: integer
+          description: Number of items in original array
+        deduplicatedCount:
+          type: integer
+          description: Number of items after deduplication
+        duplicatesRemoved:
+          type: integer
+          description: Number of duplicate items removed
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScholarshipItem'
+          description: Deduplicated array of scholarship items
+        duplicateGroups:
+          type: array
+          items:
+            type: object
+            properties:
+              representative:
+                $ref: '#/components/schemas/ScholarshipItem'
+              duplicates:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScholarshipItem'
+              similarity:
+                type: number
+                minimum: 0
+                maximum: 1
+          description: Groups of duplicates found
+        method:
+          type: string
+          enum: [ai, rules, hybrid]
+          description: Method used for deduplication
+        metadata:
+          type: object
+          properties:
+            processingTimeMs:
+              type: integer
+            timestamp:
+              type: string
+              format: date-time
+            model:
+              type: string
+              description: AI model used (if applicable)
+        error:
+          type: string
+          nullable: true
+          description: Error message if deduplication failed
+      required:
+        - success
+        - originalCount
+        - deduplicatedCount
+        - duplicatesRemoved
+        - items
+        - method
+        - metadata
+
+    BatchDeduplicationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeduplicationResult'
+        summary:
+          type: object
+          properties:
+            totalBatches:
+              type: integer
+            totalOriginalItems:
+              type: integer
+            totalDeduplicatedItems:
+              type: integer
+            totalDuplicatesRemoved:
+              type: integer
+            processingTimeMs:
+              type: integer
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - success
+        - results
+        - summary
+        - timestamp
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Whether the deduplication results are valid
+        originalCount:
+          type: integer
+          description: Count of original items
+        deduplicatedCount:
+          type: integer
+          description: Count of deduplicated items
+        errors:
+          type: array
+          items:
+            type: string
+          description: List of validation errors
+        warnings:
+          type: array
+          items:
+            type: string
+          description: List of validation warnings
+        metadata:
+          type: object
+          properties:
+            duplicatesExpected:
+              type: integer
+            duplicatesFound:
+              type: integer
+            integrityCheck:
+              type: boolean
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - valid
+        - originalCount
+        - deduplicatedCount
+        - errors
+        - warnings
+        - metadata
+        - timestamp
+
+tags:
+  - name: CV Processing
+    description: Operations related to CV parsing and profile extraction
+  - name: Scholarship Matching
+    description: Operations related to scholarship matching and ranking
+  - name: PII Scrubbing
+    description: Operations related to PII detection and scrubbing
+  - name: Scholarship Scraping
+    description: Operations related to scraping and normalizing scholarship data
+  - name: Funding
+    description: Operations related to funding classification
+  - name: Deadline Parsing
+    description: Operations related to deadline parsing and validation
+  - name: Deduplication
+    description: Operations related to scholarship deduplication
+  - name: System
+    description: System health and monitoring endpoints
